@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zenix AI</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#09090f;color:white;font-family:Arial,sans-serif;height:100dvh;display:flex}
+.sidebar{width:250px;background:#101019;padding:22px;border-right:1px solid #252535;flex-shrink:0}
+.logo{font-size:25px;font-weight:bold;color:#a78bfa}
+.new{width:100%;padding:13px;margin-top:35px;background:#a78bfa;color:#09090f;border:0;border-radius:9px;font-weight:bold}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;height:100dvh}
+.top{padding:20px 25px;border-bottom:1px solid #252535;font-weight:bold}
+.status{color:#a78bfa;font-size:12px;margin-left:8px}
+.chat{flex:1;display:flex;flex-direction:column;align-items:center;padding:25px;overflow-y:auto}
+.welcome{text-align:center;max-width:500px;margin:auto}
+.welcome h1{font-size:38px;margin-bottom:10px}
+.welcome p{color:#999}
+.messages{width:100%;max-width:720px;display:flex;flex-direction:column;gap:16px;margin:auto}
+.message{padding:15px 18px;border-radius:13px;line-height:1.6;max-width:90%;white-space:pre-wrap;overflow-wrap:anywhere}
+.user{align-self:flex-end;background:#29243a}
+.ai{align-self:flex-start;background:#171722}
+.error{color:#ff9999}
+.bottom{padding:15px 20px;display:flex;justify-content:center}
+.inputbox{display:flex;gap:10px;width:100%;max-width:720px;background:#171722;border:1px solid #343446;border-radius:13px;padding:9px}
+input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:white;padding:10px;font-size:15px}
+.send{background:#a78bfa;color:#09090f;border:0;border-radius:9px;padding:0 19px;font-weight:bold}
+.send:disabled{opacity:.5}
+.note{font-size:11px;color:#666;text-align:center;margin-top:10px}
+@media(max-width:600px){
+.sidebar{width:65px;padding:12px}
+.logo{font-size:17px}
+.sidebar .sideText{display:none}
+.new{font-size:20px;padding:10px 0}
+.welcome h1{font-size:29px}
+.chat{padding:15px}
+}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+<div class="logo">Zenix.</div>
+<button class="new" onclick="newChat()">＋ <span class="sideText">New chat</span></button>
+</aside>
+
+<main class="main">
+<header class="top">Zenix AI <span class="status">● Gemini connected</span></header>
+
+<section class="chat" id="chat">
+<div class="welcome" id="welcome">
+<h1>Welcome to Zenix AI.</h1>
+<p>Your ideas. Your questions. One intelligent assistant.</p>
+</div>
+<div class="messages" id="messages"></div>
+</section>
+
+<footer class="bottom">
+<div style="width:100%;max-width:720px">
+<div class="inputbox">
+<input id="prompt" placeholder="Message Zenix AI..." autocomplete="off">
+<button class="send" id="send" onclick="sendMessage()">Send</button>
+</div>
+<div class="note">Zenix AI can make mistakes. Verify important information.</div>
+</div>
+</footer>
+</main>
+
+<script>
+const API_URL="https://zenix-ai.olvinparmar3.workers.dev";
+
+const input=document.getElementById("prompt");
+const messages=document.getElementById("messages");
+const welcome=document.getElementById("welcome");
+const send=document.getElementById("send");
+
+let history=[];
+let busy=false;
+
+function addMessage(text,type){
+const div=document.createElement("div");
+div.className="message "+type;
+div.textContent=text;
+messages.appendChild(div);
+return div;
+}
+
+async function sendMessage(){
+const text=input.value.trim();
+if(!text||busy)return;
+
+welcome.style.display="none";
+addMessage(text,"user");
+input.value="";
+busy=true;
+send.disabled=true;
+
+const loading=addMessage("Zenix is thinking...","ai");
+document.getElementById("chat").scrollTop=999999;
+
+try{
+const response=await fetch(API_URL,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+message:text,
+history:history
+})
+});
+
+const data=await response.json();
+
+if(!response.ok)throw new Error(data.error||"AI request failed.");
+
+const reply=data.reply||"I couldn't generate a response.";
+
+history.push(
+{role:"user",text:text},
+{role:"model",text:reply}
+);
+
+loading.textContent=reply;
+
+}catch(error){
+loading.textContent="Sorry, something went wrong: "+error.message;
+loading.classList.add("error");
+}finally{
+busy=false;
+send.disabled=false;
+input.focus();
+document.getElementById("chat").scrollTop=999999;
+}
+}
+
+function newChat(){
+history=[];
+messages.innerHTML="";
+welcome.style.display="block";
+input.value="";
+}
+
+input.addEventListener("keydown",e=>{
+if(e.key==="Enter"&&!e.shiftKey){
+e.preventDefault();
+sendMessage();
+}
+});
+</script>
+</body>
+</html>
